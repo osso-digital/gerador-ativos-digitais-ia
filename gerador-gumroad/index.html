@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Ativos Digitais com IA para Gumroad</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f7f9fc; }
+        .canvas-container {
+            border: 2px dashed #a0aec0;
+            background-color: #ffffff;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border-radius: 0.75rem;
+            min-height: 400px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        .ai-image-preview {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <header class="text-center mb-10">
+        <h1 class="text-3xl font-bold text-gray-800">Gerador de Ativos Digitais com IA</h1>
+        <p class="text-md text-gray-500">Descreva seu design e a IA o criará para você!</p>
+    </header>
+
+    <main class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        
+        <!-- Coluna de Entrada de Prompt e Histórico (Col 1) -->
+        <div class="lg:col-span-1 flex flex-col space-y-8">
+            <div class="bg-white p-6 rounded-xl shadow-lg h-fit">
+                <h2 class="text-xl font-semibold mb-4 text-indigo-700">Entrada de Prompt para IA</h2>
+
+                <div class="mb-6">
+                    <label for="designType" class="block text-sm font-medium text-gray-700">Tipo de Produto</label>
+                    <select id="designType" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                        <option value="planner">Planner Digital</option>
+                        <option value="sticker-sheet">Folha de Stickers</option>
+                        <option value="gem">Gema Digital (Simulada)</option>
+                        <option value="mockup">Mockup Digital</option>
+                    </select>
+                </div>
+
+                <div class="mb-6">
+                    <label for="description" class="block text-sm font-medium text-gray-700">Descrição Detalhada do Design</label>
+                    <textarea id="description" rows="6" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" placeholder="Ex: Um planner semanal minimalista com tema floral, cores pastéis de lavanda e verde menta, espaço para gratidão."></textarea>
+                </div>
+
+                <div class="mb-6">
+                    <label for="style" class="block text-sm font-medium text-gray-700">Estilo Artístico</label>
+                    <input type="text" id="style" value="foto-realista, arte digital" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" placeholder="Ex: Aquarela, 3D, Minimalista, Retrô, Fotográfico">
+                </div>
+
+                <div class="mb-6">
+                    <label for="colors" class="block text-sm font-medium text-gray-700">Cores Predominantes</label>
+                    <input type="text" id="colors" value="tons de azul e rosa" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" placeholder="Ex: Tons de verde esmeralda, dourado, preto e branco">
+                </div>
+                
+                <button onclick="requestAIDesign()" class="mt-4 w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition duration-150 shadow-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Gerar Design com IA
+                </button>
+            </div>
+
+            <!-- Histórico de Designs (Col 1 - parte inferior) -->
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800 flex items-center">
+                    Histórico de Designs 
+                    <span id="authStatus" class="ml-2 text-xs font-normal text-gray-400">...</span>
+                </h2>
+                <div id="historyList" class="space-y-3">
+                    <p class="text-center text-gray-500 text-sm">A carregar histórico...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Área de Preview da IA (Cols 2, 3 e 4) -->
+        <div class="lg:col-span-3">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">Preview da Imagem Gerada pela IA</h2>
+            
+            <div class="canvas-container w-full aspect-[210/297] flex justify-center items-center">
+                <img id="aiPreviewImage" src="" alt="Preview do Design Gerado pela IA" class="ai-image-preview hidden">
+                <p id="placeholderText" class="text-gray-400">Seu design gerado pela IA aparecerá aqui.</p>
+            </div>
+
+            <div class="mt-4 flex space-x-4">
+                <button id="exportButton" onclick="exportAIDesign()" class="flex-1 bg-emerald-500 text-white py-3 rounded-lg font-bold hover:bg-emerald-600 transition duration-150 shadow-xl" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Exportar PNG
+                </button>
+            </div>
+            
+            <div id="messageBox" class="mt-4 p-3 rounded-lg text-center font-medium text-sm hidden" role="alert"></div>
+        </div>
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, query, orderBy, limit, onSnapshot, addDoc, serverTimestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Variáveis globais do Canvas/Ambiente
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let db;
+        let auth;
+        let userId = null;
+        let lastGeneratedImageUrl = '';
+        let isAuthReady = false;
+
+        // 1. Inicialização e Autenticação do Firebase
+        if (firebaseConfig) {
+            setLogLevel('debug'); // Ativa o log para depuração
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+
+            onAuthStateChanged(auth, async (user) => {
+                const statusElement = document.getElementById('authStatus');
+                if (user) {
+                    userId = user.uid;
+                    statusElement.textContent = `Autenticado: ${userId.substring(0, 8)}...`;
+                    statusElement.classList.replace('text-gray-400', 'text-green-600');
+                } else {
+                    // Tenta autenticação com token personalizado ou anônima
+                    try {
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(auth, initialAuthToken);
+                            userId = auth.currentUser.uid;
+                        } else {
+                            const anonUser = await signInAnonymously(auth);
+                            userId = anonUser.user.uid;
+                        }
+                    } catch (error) {
+                        console.error("Erro de Autenticação Firebase:", error);
+                        showMessage(`Erro de autenticação: ${error.message}. O histórico não funcionará.`, 'bg-red-100 text-red-800');
+                        statusElement.textContent = 'Erro de Autenticação.';
+                        statusElement.classList.replace('text-gray-400', 'text-red-600');
+                    }
+                }
+                isAuthReady = true;
+                loadDesignHistory(); // Carrega o histórico após a autenticação
+            });
+        } else {
+            document.getElementById('authStatus').textContent = 'Configuração do Firebase ausente.';
+            showMessage('Configuração do Firebase ausente. O histórico de designs não funcionará.', 'bg-red-100 text-red-800');
+        }
+        
+        // 2. Funções de Banco de Dados
+        
+        /**
+         * Salva os dados do design gerado no Firestore.
+         * Caminho: /artifacts/{appId}/users/{userId}/designs
+         */
+        async function saveDesignToHistory(designData, base64Data) {
+            if (!db || !userId) {
+                console.error("Database not ready or User not authenticated.");
+                return;
+            }
+
+            // O Base64 é armazenado diretamente. ATENÇÃO ao limite de 1MB por documento.
+            const design = {
+                userId: userId,
+                timestamp: serverTimestamp(),
+                designType: designData.designType,
+                description: designData.description,
+                style: designData.style,
+                colors: designData.colors,
+                base64Data: base64Data, 
+            };
+            
+            const userDesignsPath = `artifacts/${appId}/users/${userId}/designs`;
+            const designsCollection = collection(db, userDesignsPath);
+
+            try {
+                await addDoc(designsCollection, design);
+                console.log("Design salvo no histórico.");
+            } catch (e) {
+                console.error("Erro ao salvar design no Firestore:", e);
+                // A mensagem de erro pode ser muito longa, então apenas um aviso no console.
+            }
+        }
+
+        /**
+         * Carrega o histórico de designs em tempo real (onSnapshot).
+         */
+        function loadDesignHistory() {
+            if (!isAuthReady || !db || !userId) {
+                return;
+            }
+
+            const userDesignsPath = `artifacts/${appId}/users/${userId}/designs`;
+            const designsCollection = collection(db, userDesignsPath);
+            
+            // Query: 10 designs mais recentes
+            const q = query(designsCollection, orderBy('timestamp', 'desc'), limit(10));
+
+            const historyList = document.getElementById('historyList');
+            historyList.innerHTML = '<p class="text-center text-gray-500 py-4 text-sm">A carregar...</p>';
+
+            // Listener em tempo real
+            onSnapshot(q, (snapshot) => {
+                historyList.innerHTML = ''; // Limpa as entradas anteriores
+                
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const date = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleDateString() : 'A carregar...';
+                    
+                    const item = document.createElement('div');
+                    item.className = 'flex items-start p-3 bg-gray-50 rounded-lg shadow-sm hover:bg-gray-100 transition duration-100 cursor-pointer border border-transparent';
+                    
+                    // Adiciona um placeholder caso o timestamp ainda não tenha sido processado pelo servidor
+                    const previewSrc = data.base64Data || 'https://placehold.co/48x48/f3f4f6/a0aec0?text=AI';
+                    
+                    item.innerHTML = `
+                        <img src="${previewSrc}" alt="${data.description.substring(0, 20)}..." class="w-12 h-12 object-cover rounded-md mr-3 border border-gray-200" loading="lazy">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs font-semibold text-indigo-700 truncate">${data.designType.toUpperCase()}</p>
+                            <p class="text-xs text-gray-600 truncate">${data.description}</p>
+                            <p class="text-xs text-gray-400 mt-1">Gerado em: ${date}</p>
+                        </div>
+                    `;
+
+                    // Permite recarregar o design na área de preview e o prompt no formulário
+                    item.addEventListener('click', () => {
+                        document.getElementById('designType').value = data.designType;
+                        document.getElementById('description').value = data.description;
+                        document.getElementById('style').value = data.style || '';
+                        document.getElementById('colors').value = data.colors || '';
+                        displayAIGeneratedImage(data.base64Data, false); // Não salva no histórico novamente
+                        showMessage('Design carregado do histórico. Use "Exportar PNG" para baixar ou "Gerar Design" para criar uma variação.', 'bg-blue-100 text-blue-800');
+                    });
+
+                    historyList.appendChild(item);
+                });
+                if (snapshot.empty) {
+                     historyList.innerHTML = '<p class="text-center text-gray-500 py-4 text-sm">Nenhum design salvo ainda.</p>';
+                }
+            }, (error) => {
+                console.error("Erro ao ler histórico do Firestore:", error);
+                historyList.innerHTML = '<p class="text-center text-red-500 py-4 text-sm">Erro ao carregar histórico.</p>';
+            });
+        }
+
+        // 3. Lógica da UI e AI (Global para ser acessível pelo HTML)
+
+        /**
+         * Exibe uma mensagem na caixa de feedback.
+         */
+        window.showMessage = (message, classes) => {
+            const box = document.getElementById('messageBox');
+            box.textContent = message;
+            box.className = `mt-4 p-3 rounded-lg text-center font-medium ${classes}`;
+            box.style.display = 'block';
+        }
+
+        /**
+         * Envia os dados para a função Vercel, que trata da geração de imagem pela IA.
+         */
+        window.requestAIDesign = async () => {
+            const description = document.getElementById('description').value;
+
+            if (!description.trim()) {
+                showMessage('Por favor, forneça uma descrição para o design.', 'bg-red-100 text-red-800');
+                return;
+            }
+
+            // Coleta todos os dados do formulário para enviar ao backend e salvar
+            const dataToSend = {
+                designType: document.getElementById('designType').value,
+                description: description,
+                style: document.getElementById('style').value,
+                colors: document.getElementById('colors').value
+            };
+
+            // Define o estado de carregamento
+            showMessage('Gerando seu design com IA... Isso pode levar alguns segundos (até 30s).', 'bg-yellow-100 text-yellow-800');
+            document.getElementById('exportButton').disabled = true;
+            document.getElementById('aiPreviewImage').classList.add('hidden');
+            document.getElementById('placeholderText').classList.remove('hidden');
+            document.getElementById('placeholderText').textContent = 'Gerando imagem... Por favor, aguarde.';
+
+            try {
+                // Endpoint da Vercel Edge Function
+                const response = await fetch('/api/generate-image', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dataToSend) // Envia todos os dados do prompt
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `Erro HTTP! Status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
+                    const base64Data = result.predictions[0].bytesBase64Encoded;
+                    const imageUrl = `data:image/png;base64,${base64Data}`;
+                    
+                    // Exibe a imagem e salva no histórico
+                    displayAIGeneratedImage(imageUrl, true, dataToSend);
+
+                } else {
+                    showMessage('Resposta da IA incompleta ou sem dados de imagem.', 'bg-red-100 text-red-800');
+                }
+            } catch (error) {
+                console.error("Erro na requisição da IA (Frontend):", error);
+                showMessage(`Falha na geração: ${error.message}. Verifique a Variável de Ambiente (GOOGLE_API_KEY) na Vercel e o estado de Ativação/Faturação da API.`, 'bg-red-100 text-red-800');
+            } finally {
+                document.getElementById('placeholderText').textContent = 'Seu design gerado pela IA aparecerá aqui.';
+            }
+        }
+
+        /**
+         * Recebe a URL base64 da imagem gerada pela IA e a exibe, salvando no histórico se necessário.
+         */
+        window.displayAIGeneratedImage = (imageUrl, save = false, designData = {}) => {
+            const imgElement = document.getElementById('aiPreviewImage');
+            const placeholder = document.getElementById('placeholderText');
+
+            if (imageUrl) {
+                imgElement.src = imageUrl;
+                imgElement.onload = () => {
+                    imgElement.classList.remove('hidden');
+                    placeholder.classList.add('hidden');
+                    document.getElementById('exportButton').disabled = false;
+                    showMessage(save ? 'Design gerado e salvo no histórico com sucesso! Baixe seu ativo.' : 'Design carregado com sucesso!', 'bg-green-100 text-green-800');
+                    lastGeneratedImageUrl = imageUrl;
+                    
+                    // Salva no Firestore se for uma nova geração
+                    if (save && designData) {
+                        saveDesignToHistory(designData, imageUrl); // Salvamos a URL completa (data:image/png;base64,...)
+                    }
+                };
+                imgElement.onerror = () => {
+                    imgElement.classList.add('hidden');
+                    placeholder.classList.remove('hidden');
+                    showMessage('Erro ao carregar a imagem. Tente novamente.', 'bg-red-100 text-red-800');
+                    document.getElementById('exportButton').disabled = true;
+                };
+            } else {
+                imgElement.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+                showMessage('Nenhuma imagem para exibir.', 'bg-red-100 text-red-800');
+                document.getElementById('exportButton').disabled = true;
+            }
+        }
+
+        /**
+         * Exporta a imagem gerada pela IA.
+         */
+        window.exportAIDesign = () => {
+            if (lastGeneratedImageUrl) {
+                const tempLink = document.createElement('a');
+                tempLink.href = lastGeneratedImageUrl;
+                
+                const designType = document.getElementById('designType').value;
+                // Cria um nome de ficheiro limpo
+                const description = document.getElementById('description').value.substring(0, 30).replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                tempLink.download = `${designType}_${description || 'ai_design'}.png`;
+                
+                document.body.appendChild(tempLink);
+                tempLink.click();
+                document.body.removeChild(tempLink);
+                
+                showMessage('Design exportado com sucesso! Verifique seus downloads.', 'bg-blue-100 text-blue-800');
+            } else {
+                showMessage('Nenhum design para exportar. Por favor, gere um primeiro.', 'bg-red-100 text-red-800');
+            }
+        }
+    </script>
+</body>
+</html>
